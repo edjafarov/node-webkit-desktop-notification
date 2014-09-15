@@ -1,43 +1,62 @@
 /*
-title - The title that must be shown within the notification
-options (Optional) - An object that allows to configure the notification. It can have the following properties:
-	-dir : The direction of the notification; it can be auto, ltr, or rtl
-	-lang: Specifiy the lang used within the notification. This string must be a valid BCP 47 language tag.
-x	body: A string representing an extra content to display within the notification
-x	tag: An ID for a given notification that allows to retrieve, replace or remove it if necessary
-x	icon: The URL of an image to be used as an icon by the notification
 
-x	ease: type of easin/out
-	htmlBody: the body as HTML
-	iconBase64: //base64 represetation of icon
-	css: []
-x	width:
-x	height:
+
+x ease: type of easin/out
+  htmlBody: the body as HTML
+  iconBase64: //base64 represetation of icon
+  css: []
+x width:
+x height:
 return Ojbect eventEmitter
-	methods
-x		show(ease)
-x		close(ease)
-		
-		on
-		off
-		emit
+  methods
+x   show(ease)
+x   close(ease)
+    
+    on
+    off
+    emit
 
-		onclick
-		onshow
-		onerror
-		onclose
-	properties
-		document
-	events
-		click
-		show
-		showStart
-		error
-		close
-		closeStart
+    onclick
+    onshow
+    onerror
+    onclose
+  properties
+    document
+  events
+    click
+    show
+    showStart
+    error
+    close
+    closeStart
 */
 
-/***/////////////STATIC
+/*
+* wrapper for lib
+*/
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(function () {
+            return (root.DesktopNotification = factory());
+        });
+    } else if (typeof exports === 'object') {
+        // Node. Does not work with strict CommonJS, but
+        // only CommonJS-like enviroments that support module.exports,
+        // like Node.
+        module.exports = factory();
+    } else {
+        // Browser globals
+        root.DesktopNotification = factory();
+    }
+}(this, function () {
+
+  var gui = global.window.nwDispatcher.requireNwGui();
+//----------------    
+/* STATIC stuff */
+//----------------
+
+// get urrent script's url, used to find .html file for popups
 var scriptSource = (function(scripts) {
     var scripts = document.getElementsByTagName('script'),
         script = scripts[scripts.length - 1];
@@ -49,8 +68,10 @@ var scriptSource = (function(scripts) {
     return script.getAttribute('src', -1)
 }());
 
+
+/* easing functions for popup animations */
 var ease = {
-	easeInQuad: function (t, b, c, d) {
+  easeInQuad: function (t, b, c, d) {
     return c * (t /= d) * t + b;
   },
   easeOutQuad: function (t, b, c, d) {
@@ -192,238 +213,114 @@ var ease = {
     }
   }
 }
-var defaultOptions = {
-	width: 288,  // max size of html5 notifications
-	height: 96, // max size of html5 notifications
-	body: null,
-	icon: null,
-	ease: ease.easeOutSine,
-	htmlBody: null,
-	javascript: [],
-	css: [],
-	
-	frame: false,
-	toolbar: false,
-	'always-on-top': true,
-	show: false,
-	resizable: false,
 
-	easeTime: 125
+
+var defaultOptions = {
+  width: 288,  // max size of html5 notifications
+  height: 96, // max size of html5 notifications
+  body: null,
+  icon: null,
+  ease: ease.easeOutSine,
+  htmlBody: null,
+  javascript: [],
+  css: [],
+  
+  frame: false,
+  toolbar: false,
+  'always-on-top': true,
+  show: false,
+  resizable: false,
+
+  easeTime: 125
 };
 
+// smallest time between frames ms
 var keyStep = 1000/120;
-/***/////////////STATIC
+// margin between popups
+var margin = 10;
 
+//----------------    
+/* ENGINE       */
+//----------------
 
-//////ENGINE -------------
+//current movement tasks
 var movements = [];
 
 var engine = setInterval(function(){
-	movements.forEach(function(movement, i){
-		if(!movement.finished && !movement.win.isMoving || movement.win.isMoving == movement) movement.makeStep();
-		if(movement.finished) movements.splice(i, 1);
-	});
+  movements.forEach(function(movement, i){
+    if(!movement.finished && !movement.win.isMoving || movement.win.isMoving == movement) movement.makeStep();
+    if(movement.finished) movements.splice(i, 1);
+  });
 }, keyStep);
 
+
 function MovementTask(win, start, diff, steps, ease, done){
-	this.step = 0;
-	this.win = win;
-	this.start = start;
-	this.start.x = this.start.x || this.win.x;
-	this.start.y = this.start.y || this.win.y;
-	this.diff = diff;
-	this.steps = steps;
-	this.ease = ease;
-	this.done = done;
+  this.step = 0;
+  this.win = win;
+  this.start = start;
+  this.start.x = this.start.x || this.win.x;
+  this.start.y = this.start.y || this.win.y;
+  this.diff = diff;
+  this.steps = steps;
+  this.ease = ease;
+  this.done = done;
 }
 
 MovementTask.prototype.makeStep = function(){
-	if(!this.win.isActive) {
-		this.finished = true;
-		delete this.win.isMoving;
-		if(this.done) this.done.apply(this);
-	}
-	if(!this.win.isMoving) this.win.isMoving = this;
-	var x = Math.floor(this.ease(this.step, this.start.x, this.diff.x, this.steps));
-	var y = Math.floor(this.ease(this.step, this.start.y, this.diff.y, this.steps));
-	this.win.moveTo(x, y);
-	this.step+=1;
-	if(this.step >= this.steps - 1){
-		this.finished = true;
-		delete this.win.isMoving;
-		if(this.done)this.done.apply(this);
-	}
+  if(!this.win.isActive) {
+    this.finished = true;
+    delete this.win.isMoving;
+    if(this.done) this.done.apply(this);
+  }
+  if(!this.win.isMoving) this.win.isMoving = this;
+  var x = Math.floor(this.ease(this.step, this.start.x, this.diff.x, this.steps));
+  var y = Math.floor(this.ease(this.step, this.start.y, this.diff.y, this.steps));
+  this.win.moveTo(x, y);
+  this.step+=1;
+  if(this.step >= this.steps - 1){
+    this.finished = true;
+    delete this.win.isMoving;
+    if(this.done)this.done.apply(this);
+  }
 }
-//create several slots for notifications
-//assign slot for notification
-//slot could be assigned or empty
-//startshow - assigned
-//endclose - empty
-
 //TODO: to save resources and make performance higher we need to create window pool 
 //every notification before shown will be taken from the pool and used
-//////ENGINE -------------
 
-//////DESKTOP NOTIFICATIONS
-var margin = 10;
-
-//module.exports = function(gui){
-	var gui = global.window.nwDispatcher.requireNwGui();
-	console = global.window.console;
-	var screen = global.window.screen;
-	var tagged = {};
-	var activeNotifications = [];
-
-	function getNextAvailTop(toIth){
-		var len = activeNotifications.length;
-		if(toIth == 0 || toIth > 0) len = toIth;
-		var summHeight = screen.availTop + 10;
-		
-		for(var i=0; i< len; i++){
-			summHeight+= activeNotifications[i].options.height + margin;
-		}
-
-	  return summHeight;
-	}
-
-///CLASS
-	function DesktopNotification(title, options){
-		this.title = title;
-		this.options = extend(clone(defaultOptions), options);
-		//put tagged into hash
-		if(this.options.tag) tagged[this.options.tag] = this;
-	}
-
-
-	DesktopNotification.get = function(tag){
-		return tagged[tag];
-	}
-	/**
-	*	show notification
-	*/
-	DesktopNotification.prototype.show = function(cb){
-		
-		var scriptArr = scriptSource.split("/");
-		scriptArr.splice(scriptArr.length - 1, 1);
-		var desktopNotificationHtml = scriptArr.join("/") + "/desktopNotification.html";
-		console.log(desktopNotificationHtml)
-
-		this.win = gui.Window.open(
-			desktopNotificationHtml, this.options);
-		
-
-
-		this.win.moveTo(rightBorder() + 10, getNextAvailTop());
-		this.win.show();
-		//this.win.setShowInTaskbar(false);
-
-
-		activeNotifications.push(this);
-		this.win.isActive = true;
-		//delay untill the window will be loaded
-		this.win.on('closeclick', function(){
-			console.log("CLOSING");
-		});
-		
-
-		this.win.on('loaded', function(){
-			new Emitter(this.win.window);
-			this.win.window.on('close.click', function(){
-				this.close();
-			}.bind(this));
-			
-			var msgDoc = this.win.window.document;
-			var image = msgDoc.getElementById('image');
-			var message = msgDoc.getElementById('message');
-			image.getElementsByTagName('img')[0].src = this.options.icon;
-			message.getElementsByTagName('h3')[0].innerHTML = this.title;
-			message.getElementsByTagName('p')[0].innerHTML = this.options.body;
-
-			movements.push(new MovementTask(this.win, {}, 
-										{x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, cb || function(){}));
-		
-		}.bind(this))
-	}
-
-	/**
-	* close notification
-	*/
-	DesktopNotification.prototype.close = function(cb){
-
-		var start = this.win.x;
-		this.win.moveTo(this.win.x, this.win.y);
-		var spliceIth = activeNotifications.indexOf(this);
- 
-		movements.push(new MovementTask(this.win, {}, 
-										{x: this.options.width + 20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, done));
-		function done(){
-			// need to move up all of previous
-			// all of them should be frozen until end movement
-			// enigne should handle this
-			this.win.isActive = false;
-			this.win.close(true);
-
-			activeNotifications.splice(spliceIth, 1);
-
-			if(activeNotifications[spliceIth]){
-				var diffY = getNextAvailTop(spliceIth) - activeNotifications[spliceIth].win.y;
-				for(var i=spliceIth; i<activeNotifications.length;i++){
-					movements.push(new MovementTask(activeNotifications[i].win, {}, 
-											{x: 0, y: diffY}, defaultOptions.easeTime/keyStep, defaultOptions.ease))
-				}
-			}
-
-			if(cb) cb.call(this);
-		}
-		done.bind(this);
-	};
-///CLASS --- end
-
-
-	var not = new DesktopNotification("First message", {icon:"http://dummyimage.com/96/ccc/000", body:"This is first meaningful notification"}); 
-	
-	not.show(function(){
-			
-	})
-
-
-	var not1 = new DesktopNotification("Second message", {icon:"http://dummyimage.com/96/ddd/000", body:"This is Second meaningful notification"}); 
-	
-	not1.show(function(){
-			
-			
-	});
-	var not2 = new DesktopNotification("Third message", {icon:"http://dummyimage.com/96/eee/000", body:"This is third meaningful notification"}); 
-	
-	not2.show(function(){
-			
-			//not1.close();
-	});
-
-
-//}
+var tagged = {};
+var activeNotifications = []; 
 
 //UTILS
+function getNextAvailTop(toIth){
+  var len = activeNotifications.length;
+  if(toIth == 0 || toIth > 0) len = toIth;
+  var summHeight = screen.availTop + 10;
+  
+  for(var i=0; i< len; i++){
+    summHeight+= activeNotifications[i].options.height + margin;
+  }
+
+  return summHeight;
+}
+
 function extend(a, byB){
-	for(var key in byB){
-		a[key] = byB[key];
-	}
-	return a;
+  for(var key in byB){
+    a[key] = byB[key];
+  }
+  return a;
 }
 
 function clone(obj){
-	return JSON.parse(JSON.stringify(obj));
+  return JSON.parse(JSON.stringify(obj));
 }
 
-function rightBorder(){	
-	var screen = global.window.screen;
-	return screen.availLeft + screen.availWidth;
+function rightBorder(){ 
+  var screen = global.window.screen;
+  return screen.availLeft + screen.availWidth;
 }
 
-//UTILS
-
-
-//EMITTER
+/*-------*
+* EMITTER CLASS, to get messaging in place for popups
+*--------*/
 /**
  * Initialize a new `Emitter`.
  *
@@ -581,7 +478,116 @@ Emitter.prototype.listeners = function(event){
 Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
-///EMITTER
+
+
+/**
+* DESKTOP NOTIFICATIONS CLASS
+*
+*
+* title - The title that must be shown within the notification
+* options (Optional) - An object that allows to configure the notification. It can have the following properties:
+*   -dir : The direction of the notification; it can be auto, ltr, or rtl-
+*   -lang: Specifiy the lang used within the notification. This string must be a valid BCP 47 language tag.-
+*   body: A string representing an extra content to display within the notification
+*   tag: An ID for a given notification that allows to retrieve, replace or remove it if necessary
+*   icon: The URL of an image to be used as an icon by the notification
+*/
+
+function DesktopNotification(title, options){
+  this.title = title;
+  this.options = extend(clone(defaultOptions), options);
+  //put tagged into hash
+  if(this.options.tag) tagged[this.options.tag] = this;
+}
+
+DesktopNotification.ease = ease;
+
+DesktopNotification.get = function(tag){
+  return tagged[tag];
+}
+/**
+* show notification
+*/
+DesktopNotification.prototype.show = function(cb){
+  
+  var scriptArr = scriptSource.split("/");
+  scriptArr.splice(scriptArr.length - 1, 1);
+  var desktopNotificationHtml = scriptArr.join("/") + "/desktopNotification.html";
+
+
+  this.win = gui.Window.open(
+    desktopNotificationHtml, this.options);
+  
+
+
+  this.win.moveTo(rightBorder() + 10, getNextAvailTop());
+  this.win.show();
+  //this.win.setShowInTaskbar(false);
+
+
+  activeNotifications.push(this);
+  this.win.isActive = true;
+  //delay untill the window will be loaded
+
+
+  this.win.on('loaded', function(){
+    new Emitter(this.win.window);
+    this.win.window.on('close.click', function(){
+      this.close();
+    }.bind(this));
+    
+    var msgDoc = this.win.window.document;
+    var image = msgDoc.getElementById('image');
+    var message = msgDoc.getElementById('message');
+    image.getElementsByTagName('img')[0].src = this.options.icon;
+    message.getElementsByTagName('h3')[0].innerHTML = this.title;
+    message.getElementsByTagName('p')[0].innerHTML = this.options.body;
+
+    movements.push(new MovementTask(this.win, {}, 
+                  {x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, cb || function(){}));
+  
+  }.bind(this))
+}
+
+/**
+* close notification
+*/
+DesktopNotification.prototype.close = function(cb){
+
+  var start = this.win.x;
+  this.win.moveTo(this.win.x, this.win.y);
+  var spliceIth = activeNotifications.indexOf(this);
+
+  movements.push(new MovementTask(this.win, {}, 
+                  {x: this.options.width + 20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, done));
+  function done(){
+    // need to move up all of previous
+    // all of them should be frozen until end movement
+    // enigne should handle this
+    this.win.isActive = false;
+    this.win.close(true);
+
+    activeNotifications.splice(spliceIth, 1);
+
+    if(activeNotifications[spliceIth]){
+      var diffY = getNextAvailTop(spliceIth) - activeNotifications[spliceIth].win.y;
+      for(var i=spliceIth; i<activeNotifications.length;i++){
+        movements.push(new MovementTask(activeNotifications[i].win, {}, 
+                    {x: 0, y: diffY}, defaultOptions.easeTime/keyStep, defaultOptions.ease))
+      }
+    }
+
+    if(cb) cb.call(this);
+  }
+  done.bind(this);
+};
+  
+
+  return DesktopNotification;
+}));
+
+
+
 
 //UTIL
 

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" xml:lang="en" lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>desktop notification example</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+</head>
+<body>
+  <div id="content">
+    <ul>
+      <li>
+        <a href="#" onclick="showPopup();">Simple Buddah notification</a>
+      </li>
+      <li>
+        <a href="#" onclick="showAndHidePopup();">passing Buddah notification</a>
+      </li>
+      <li>
+        <a href="#" onclick="showFunnyNotification();">Buddah is funny</a>
+      </li>
+      
+    </ul>
+  </div>
+  <script src="./desktopNotification.js"></script>
+  <script>
+  var texts = ["Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+"Health is the greatest gift, contentment the greatest wealth, faithfulness the best relationship.",
+"Three things cannot be long hidden: the sun, the moon, and the truth.",
+"The mind is everything. What you think you become.",
+"We are shaped by our thoughts; we become what we think. When the mind is pure, joy follows like a shadow that never leaves."];
+var icons = ["http://aliciahanson.com/wdpress/wp-content/uploads/2011/03/buddha-ring-by-alicia-hanson1.jpg",
+"http://www.breedbay.co.uk/forums/avatars/space-buddha.gif?dateline=1361506137",
+"http://thumbs.ebaystatic.com/d/l96/m/mIb2CUlpljCAasWfoZUodhA.jpg",
+"https://lh4.ggpht.com/vT2VrIVpi5Bg_IaGDAzw0PoozgouLd_8TIZGuvq5HZRUJQjOZEhUPCWY3X52vflOeTZwfAmTti9C4F-pCrNF1A=s96"
+      ];
+  function showPopup(){
+    var text = texts[Math.floor(Math.random() * 5)];
+
+    var icon = icons[Math.floor(Math.random() * 4)];
+    var notif = new DesktopNotification('Buddah is telling you', {icon: icon, body: text});
+    notif.show();
+  }
+
+  function showAndHidePopup(){
+    var text = texts[Math.floor(Math.random() * 5)];
+
+    var icon = icons[Math.floor(Math.random() * 4)];
+    var notif = new DesktopNotification('Buddah passing', {icon: icon, body: text});
+    notif.show(function(){
+      setTimeout(notif.close.bind(notif), 500);
+    });
+  }
+
+
+  function showFunnyNotification(){
+    var text = texts[Math.floor(Math.random() * 5)];
+
+    var icon = icons[Math.floor(Math.random() * 4)];
+    var notif = new DesktopNotification('Buddah is smiling', {icon: icon, body: text, ease: DesktopNotification.ease.easeOutElastic});
+    notif.show(function(){
+      setTimeout(notif.close.bind(notif), 500);
+    });
+  }
+  </script>
+</body>
+</html>
