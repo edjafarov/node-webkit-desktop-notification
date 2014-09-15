@@ -1,0 +1,58 @@
+<html>
+<head>
+<style type="text/css">
+/** * Eric Meyer's Reset CSS v2.0 (http://meyerweb.com/eric/tools/css/reset/) * http://cssreset.com */html, body, div, span, applet, object, iframe,h1, h2, h3, h4, h5, h6, p, blockquote, pre,a, abbr, acronym, address, big, cite, code,del, dfn, em, img, ins, kbd, q, s, samp,small, strike, strong, sub, sup, tt, var,b, u, i, center,dl, dt, dd, ol, ul, li,fieldset, form, label, legend,table, caption, tbody, tfoot, thead, tr, th, td,article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary,time, mark, audio, video {	margin: 0;	padding: 0;	border: 0;	font-size: 100%;	font: inherit;	vertical-align: baseline;}/* HTML5 display-role reset for older browsers */article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {	display: block;}body {	line-height: 1;}ol, ul {	list-style: none;}blockquote, q {	quotes: none;}blockquote:before, blockquote:after,q:before, q:after {	content: '';	content: none;}table {	border-collapse: collapse;	border-spacing: 0;}
+</style>
+<style type="text/css">
+body {
+	overflow: hidden;
+}
+#image {
+	display:inline-block;
+	width:96px;
+	height:96px; 
+	vertical-align: top;
+}
+#message {
+	display:inline-block;
+	width:168px;
+	height:72px;
+	padding: 10px;
+	font-family: sans-serif;
+	overflow: hidden;
+}
+#message p{
+	display:inline-block;
+	text-align: left;
+	font-size: 13px;
+	line-height: 1.1em;
+}
+#message h3{
+	font-weight: bold;
+	font-size: 14px;
+}
+#notification .close{
+	position: absolute;
+	right: 6px;
+	top: 3px;
+	cursor: pointer;
+}
+#notification.no-icon #image{
+	display: none;
+}
+#notification.no-icon #message{
+	width: 264px;
+}
+</style>
+</head>
+<body onclick="window.emit('body.click')">
+	<div id="notification">
+		<div class="close" onclick="window.emit('close.click')">&#215;</div>
+		<div id="image"><img src="http://dummyimage.com/96/ccc/000" onload="window.emit('icon.loaded')"/></div>
+		<div id="message" >
+			<h3></h3>
+			<p></p>
+		</div>
+	</div>
+</body>
+</html>
