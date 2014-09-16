@@ -1,34 +1,40 @@
 /*
+  DesktopNotification(title, options)
+    options:
+      width: 288, // 
+      height: 96, // 
+      body: null, // text body for notification
+      icon: null, // icon of notification
+      ease: easeFunctions.easeOutSine, //ease function
+      htmlBody: null, //notification body as HTML
+      easeTime: 125 //how fast notification should show    
+      styles: null //additional styles to add for notification  
+
+  DesktopNotification instance
+    methods:
+      show
+      close
+      on
+      off
+      emit
+    properties
+      onclick
+      onshow
+      onclose
+      onerror
+    events
+      body.click
+      show
+      close
+      showStart
+      closeStart
+      error
+      close.click
 
 
-x ease: type of easin/out
-  htmlBody: the body as HTML
+TODO:
   iconBase64: //base64 represetation of icon
   css: []
-x width:
-x height:
-return Ojbect eventEmitter
-  methods
-x   show(ease)
-x   close(ease)
-    
-    on
-    off
-    emit
-
-    onclick
-    onshow
-    onerror
-    onclose
-  properties
-    document
-  events
-    click
-    show
-    showStart
-    error
-    close
-    closeStart
 */
 
 /*
@@ -70,7 +76,7 @@ var scriptSource = (function(scripts) {
 
 
 /* easing functions for popup animations */
-var ease = {
+var easeFunctions = {
   easeInQuad: function (t, b, c, d) {
     return c * (t /= d) * t + b;
   },
@@ -220,7 +226,7 @@ var defaultOptions = {
   height: 96, // max size of html5 notifications
   body: null,
   icon: null,
-  ease: ease.easeOutSine,
+  ease: easeFunctions.easeOutSine,
   htmlBody: null,
   javascript: [],
   css: [],
@@ -257,9 +263,8 @@ var engine = setInterval(function(){
 function MovementTask(win, start, diff, steps, ease, done){
   this.step = 0;
   this.win = win;
-  this.start = start;
-  this.start.x = this.start.x || this.win.x;
-  this.start.y = this.start.y || this.win.y;
+  this.start = start || {};
+
   this.diff = diff;
   this.steps = steps;
   this.ease = ease;
@@ -271,10 +276,17 @@ MovementTask.prototype.makeStep = function(){
     this.finished = true;
     delete this.win.isMoving;
     if(this.done) this.done.apply(this);
+    return;
   }
-  if(!this.win.isMoving) this.win.isMoving = this;
-  var x = Math.floor(this.ease(this.step, this.start.x, this.diff.x, this.steps));
-  var y = Math.floor(this.ease(this.step, this.start.y, this.diff.y, this.steps));
+  if(!this.win.isMoving) {
+    this.win.isMoving = this;
+    this.start.x = this.start.x || this.win.x;
+    this.start.y = this.start.y || this.win.y;
+  }
+  
+  var x = this.diff.x?Math.floor(this.ease(this.step, this.start.x, this.diff.x, this.steps)):this.start.x;
+  var y = this.diff.y?Math.floor(this.ease(this.step, this.start.y, this.diff.y, this.steps)):this.start.y;
+  
   this.win.moveTo(x, y);
   this.step+=1;
   if(this.step >= this.steps - 1){
@@ -304,13 +316,19 @@ function getNextAvailTop(toIth){
 
 function extend(a, byB){
   for(var key in byB){
-    a[key] = byB[key];
+    if(byB[key]) a[key] = byB[key];
   }
   return a;
 }
 
 function clone(obj){
-  return JSON.parse(JSON.stringify(obj));
+  var newobj = JSON.parse(JSON.stringify(obj));
+  for(var key in obj){
+    if(typeof(obj[key]) == 'function'){
+      newobj[key] = obj[key];
+    }
+  }
+  return newobj;
 }
 
 function rightBorder(){ 
@@ -496,55 +514,122 @@ Emitter.prototype.hasListeners = function(event){
 function DesktopNotification(title, options){
   this.title = title;
   this.options = extend(clone(defaultOptions), options);
+  
   //put tagged into hash
   if(this.options.tag) tagged[this.options.tag] = this;
-}
-
-DesktopNotification.ease = ease;
-
-DesktopNotification.get = function(tag){
-  return tagged[tag];
-}
-/**
-* show notification
-*/
-DesktopNotification.prototype.show = function(cb){
-  
   var scriptArr = scriptSource.split("/");
   scriptArr.splice(scriptArr.length - 1, 1);
   var desktopNotificationHtml = scriptArr.join("/") + "/desktopNotification.html";
 
-
   this.win = gui.Window.open(
     desktopNotificationHtml, this.options);
   
-
-
   this.win.moveTo(rightBorder() + 10, getNextAvailTop());
   this.win.show();
+
+  // on<stuff> events implementation
+  this.on('body.click', function(){
+    if(this.onclick) this.onclick.call(this);
+  }.bind(this));  
+  this.on('show', function(){
+    if(this.onshow) this.onshow.call(this);
+  }.bind(this));
+  this.on('error', function(){
+    if(this.onerror) this.onerror.call(this);
+  }.bind(this));
+  this.on('close', function(){
+    if(this.onclose) this.onclose.call(this);
+  }.bind(this));
+}
+
+DesktopNotification.ease = easeFunctions;
+
+DesktopNotification.get = function(tag){
+  return tagged[tag];
+}
+
+DesktopNotification.prototype.whenReady = function(cb){
+  if(this.isLoaded) return cb.call(this);
+  this.win.on('loaded', function(){
+    new Emitter(this.win.window);
+    this.isLoaded = true;
+    cb.call(this);
+  }.bind(this));
+}
+
+DesktopNotification.prototype.on = function(){
+  var arg = arguments;
+  this.whenReady(function(){
+    this.win.window.on.apply(this.win.window, arg);
+  }.bind(this));
+};
+
+DesktopNotification.prototype.off = function(){
+  var arg = arguments;
+  this.whenReady(function(){
+    this.win.window.off.apply(this.win.window, arg);
+  }.bind(this));
+};
+
+DesktopNotification.prototype.emit = function(){
+  var arg = arguments;
+  this.whenReady(function(){
+    this.win.window.emit.apply(this.win.window, arg);
+  }.bind(this));
+};
+
+
+/**
+* show notification
+*/
+DesktopNotification.prototype.show = function(cb){
   //this.win.setShowInTaskbar(false);
 
-
+  this.win.moveTo(rightBorder() + 10, getNextAvailTop());
   activeNotifications.push(this);
   this.win.isActive = true;
   //delay untill the window will be loaded
 
 
-  this.win.on('loaded', function(){
-    new Emitter(this.win.window);
-    this.win.window.on('close.click', function(){
+  this.whenReady(function(){
+    
+    this.on('close.click', function(){
       this.close();
     }.bind(this));
     
     var msgDoc = this.win.window.document;
-    var image = msgDoc.getElementById('image');
-    var message = msgDoc.getElementById('message');
-    image.getElementsByTagName('img')[0].src = this.options.icon;
-    message.getElementsByTagName('h3')[0].innerHTML = this.title;
-    message.getElementsByTagName('p')[0].innerHTML = this.options.body;
+    //if htmlBody is not defined
+    if(!this.options.htmlBody){
+      var image = msgDoc.getElementById('image');
+      var message = msgDoc.getElementById('message');
+      var notification = msgDoc.getElementById('notification');
+      
+      //if there is no icon
+      if(!this.options.icon){
+        notification.className = "no-icon";
+      } else {
+        image.getElementsByTagName('img')[0].src = this.options.icon;
+      }
+      message.getElementsByTagName('h3')[0].innerHTML = this.title;
+      message.getElementsByTagName('p')[0].innerHTML = this.options.body;
+    } else {
+      msgDoc.body.innerHTML = this.options.htmlBody;
+    }
+
+    if(this.options.styles){
+      var node = msgDoc.createElement('style');
+      node.innerHTML = this.options.styles;
+      msgDoc.body.appendChild(node);
+    }
+
+
+    this.emit('showStart');
 
     movements.push(new MovementTask(this.win, {}, 
-                  {x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, cb || function(){}));
+                  {x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, this.options.ease, function(){
+                    this.emit('show');
+                    if(cb) cb.call(this);
+                  }.bind(this)));
   
   }.bind(this))
 }
@@ -556,19 +641,19 @@ DesktopNotification.prototype.close = function(cb){
 
   var start = this.win.x;
   this.win.moveTo(this.win.x, this.win.y);
-  var spliceIth = activeNotifications.indexOf(this);
+  
+  this.emit('closeStart');
 
   movements.push(new MovementTask(this.win, {}, 
-                  {x: this.options.width + 20, y: 0}, this.options.easeTime/keyStep, defaultOptions.ease, done));
+                  {x: this.options.width + 20, y: 0}, this.options.easeTime/keyStep, this.options.ease, done.bind(this)));
   function done(){
     // need to move up all of previous
     // all of them should be frozen until end movement
     // enigne should handle this
-    this.win.isActive = false;
-    this.win.close(true);
-
+    var spliceIth = activeNotifications.indexOf(this);
     activeNotifications.splice(spliceIth, 1);
-
+    this.win.isActive = false;
+    
     if(activeNotifications[spliceIth]){
       var diffY = getNextAvailTop(spliceIth) - activeNotifications[spliceIth].win.y;
       for(var i=spliceIth; i<activeNotifications.length;i++){
@@ -576,10 +661,11 @@ DesktopNotification.prototype.close = function(cb){
                     {x: 0, y: diffY}, defaultOptions.easeTime/keyStep, defaultOptions.ease))
       }
     }
-
+    this.win.close(true);
+    this.emit('close');
     if(cb) cb.call(this);
   }
-  done.bind(this);
+
 };
   
 

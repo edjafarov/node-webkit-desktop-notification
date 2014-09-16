@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Rich node-webkit desktop notification with html5 like API ",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node node_modules/grunt-cli/bin/grunt"
   },
   "repository": {
     "type": "git",
