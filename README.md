@@ -1,4 +1,4 @@
-node-webkit-desktop-notification [![NPM version][npm-image]][npm-url]
+node-webkit-desktop-notification
 =======
 This is proper desktop notifications for [node-webkit](https://github.com/rogerwang/node-webkit).
 
