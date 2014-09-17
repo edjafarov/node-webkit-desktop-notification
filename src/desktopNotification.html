@@ -13,6 +13,9 @@ body {
 	height:96px; 
 	vertical-align: top;
 }
+#image img{
+	width: 96px;
+}
 #message {
 	display:inline-block;
 	width:168px;
@@ -51,7 +54,7 @@ body {
 <body onclick="window.emit('body.click')">
 	<div id="notification">
 		<div class="close" onclick="window.emit('close.click')">&#215;</div>
-		<div id="image"><img src="http://dummyimage.com/96/ccc/000" /></div>
+		<div id="image"><img src="" /></div>
 		<div id="message" >
 			<h3></h3>
 			<p></p>

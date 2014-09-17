@@ -70,7 +70,6 @@ var scriptSource = (function(scripts) {
     if (script.getAttribute.length !== undefined) {
         return script.src
     }
-
     return script.getAttribute('src', -1)
 }());
 
@@ -224,6 +223,8 @@ var easeFunctions = {
 var defaultOptions = {
   width: 288,  // max size of html5 notifications
   height: 96, // max size of html5 notifications
+  x: 10000,
+  y:10000,
   body: null,
   icon: null,
   ease: easeFunctions.easeOutSine,
@@ -234,8 +235,9 @@ var defaultOptions = {
   frame: false,
   toolbar: false,
   'always-on-top': true,
-  show: false,
+  show: true,
   resizable: false,
+  focus: false,
 
   easeTime: 125
 };
@@ -497,7 +499,51 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
+var scriptArr = scriptSource.split("/");
+scriptArr.splice(scriptArr.length - 1, 1);
+var desktopNotificationHtml = scriptArr.join("/") + "/desktopNotification.html";
+var winPool = [];
 
+for(var w= 0;w < 6;w++){
+  var winOpen = gui.Window.open(desktopNotificationHtml, defaultOptions);
+  winOpen.on('loaded', function(){
+    Emitter(this.window);
+  });
+  winPool.push(winOpen);
+}
+
+
+window.onunload = function(){
+  for(var w= 0;w < winPool.length;w++){
+    winPool[w].close(true);
+  }
+}
+
+function getFreeWin(){
+  var result;
+  for(var i = 0; i< winPool.length; i++){
+    if(!winPool[i].isBusy) {
+      result = winPool[i];
+      break;
+    }
+  }
+  if(!result){
+    result = gui.Window.open(
+    desktopNotificationHtml, defaultOptions);
+    winPool.push(result);
+  }
+  result.isBusy = true;
+  result.originalHtml = result.window.document.body.innerHTML;
+  return result;
+}
+
+function release(wind){
+  //still we need Ideally to reload the notification:(
+  wind.window.off();
+  wind.window.document.body.innerHTML = wind.originalHtml;
+  delete wind.originalHtml;
+  delete wind.isBusy;
+}
 /**
 * DESKTOP NOTIFICATIONS CLASS
 *
@@ -517,15 +563,13 @@ function DesktopNotification(title, options){
   
   //put tagged into hash
   if(this.options.tag) tagged[this.options.tag] = this;
-  var scriptArr = scriptSource.split("/");
-  scriptArr.splice(scriptArr.length - 1, 1);
-  var desktopNotificationHtml = scriptArr.join("/") + "/desktopNotification.html";
 
-  this.win = gui.Window.open(
-    desktopNotificationHtml, this.options);
-  
+  this.win = getFreeWin();
+
+  this.win.resizeTo(this.options.width, this.options.height);
+
   this.win.moveTo(rightBorder() + 10, getNextAvailTop());
-  this.win.show();
+
 
   // on<stuff> events implementation
   this.on('body.click', function(){
@@ -548,34 +592,19 @@ DesktopNotification.get = function(tag){
   return tagged[tag];
 }
 
-DesktopNotification.prototype.whenReady = function(cb){
-  if(this.isLoaded) return cb.call(this);
-  this.win.on('loaded', function(){
-    new Emitter(this.win.window);
-    this.isLoaded = true;
-    cb.call(this);
-  }.bind(this));
-}
-
 DesktopNotification.prototype.on = function(){
-  var arg = arguments;
-  this.whenReady(function(){
-    this.win.window.on.apply(this.win.window, arg);
-  }.bind(this));
+  var arg = arguments;  
+  this.win.window.on.apply(this.win.window, arg);
 };
 
 DesktopNotification.prototype.off = function(){
   var arg = arguments;
-  this.whenReady(function(){
-    this.win.window.off.apply(this.win.window, arg);
-  }.bind(this));
+  this.win.window.off.apply(this.win.window, arg);
 };
 
 DesktopNotification.prototype.emit = function(){
   var arg = arguments;
-  this.whenReady(function(){
-    this.win.window.emit.apply(this.win.window, arg);
-  }.bind(this));
+  this.win.window.emit.apply(this.win.window, arg);
 };
 
 
@@ -588,50 +617,45 @@ DesktopNotification.prototype.show = function(cb){
   this.win.moveTo(rightBorder() + 10, getNextAvailTop());
   activeNotifications.push(this);
   this.win.isActive = true;
-  //delay untill the window will be loaded
-
-
-  this.whenReady(function(){
-    
-    this.on('close.click', function(){
-      this.close();
-    }.bind(this));
-    
-    var msgDoc = this.win.window.document;
-    //if htmlBody is not defined
-    if(!this.options.htmlBody){
-      var image = msgDoc.getElementById('image');
-      var message = msgDoc.getElementById('message');
-      var notification = msgDoc.getElementById('notification');
-      
-      //if there is no icon
-      if(!this.options.icon){
-        notification.className = "no-icon";
-      } else {
-        image.getElementsByTagName('img')[0].src = this.options.icon;
-      }
-      message.getElementsByTagName('h3')[0].innerHTML = this.title;
-      message.getElementsByTagName('p')[0].innerHTML = this.options.body;
-    } else {
-      msgDoc.body.innerHTML = this.options.htmlBody;
-    }
-
-    if(this.options.styles){
-      var node = msgDoc.createElement('style');
-      node.innerHTML = this.options.styles;
-      msgDoc.body.appendChild(node);
-    }
-
-
-    this.emit('showStart');
-
-    movements.push(new MovementTask(this.win, {}, 
-                  {x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, this.options.ease, function(){
-                    this.emit('show');
-                    if(cb) cb.call(this);
-                  }.bind(this)));
   
-  }.bind(this))
+  this.on('close.click', function(){
+    this.close();
+  }.bind(this));
+  
+  var msgDoc = this.win.window.document;
+  //if htmlBody is not defined
+  if(!this.options.htmlBody){
+    var image = msgDoc.getElementById('image');
+    var message = msgDoc.getElementById('message');
+    var notification = msgDoc.getElementById('notification');
+    
+    //if there is no icon
+    if(!this.options.icon){
+      notification.className = "no-icon";
+    } else {
+      image.getElementsByTagName('img')[0].src = this.options.icon;
+    }
+    message.getElementsByTagName('h3')[0].innerHTML = this.title;
+    message.getElementsByTagName('p')[0].innerHTML = this.options.body;
+  } else {
+    msgDoc.body.innerHTML = this.options.htmlBody;
+  }
+
+  if(this.options.styles){
+    var node = msgDoc.createElement('style');
+    node.innerHTML = this.options.styles;
+    msgDoc.body.appendChild(node);
+  }
+
+  this.emit('showStart');
+
+  movements.push(new MovementTask(this.win, {}, 
+                {x: -this.options.width -20, y: 0}, this.options.easeTime/keyStep, this.options.ease, function(){
+                  this.emit('show');
+                  if(cb) cb.call(this);
+                }.bind(this)));
+
+
 }
 
 /**
@@ -661,7 +685,8 @@ DesktopNotification.prototype.close = function(cb){
                     {x: 0, y: diffY}, defaultOptions.easeTime/keyStep, defaultOptions.ease))
       }
     }
-    this.win.close(true);
+    release(this.win);
+    
     this.emit('close');
     if(cb) cb.call(this);
   }
