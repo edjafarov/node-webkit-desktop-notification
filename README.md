@@ -1,5 +1,7 @@
 node-webkit-desktop-notification
 =======
+see [this](https://github.com/edjafarov/node-webkit-desktop-notification/issues/2#issuecomment-56260958) first.
+
 This is proper desktop notifications for [node-webkit](https://github.com/rogerwang/node-webkit).
 
 Idea behind is to create drop-in replacement for html5 desktop notifications. Giving though richer and [better](http://screencast.com/t/bUxB6vNvW8BN) experience.
