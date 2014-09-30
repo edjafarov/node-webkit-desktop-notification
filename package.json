@@ -20,7 +20,7 @@
     "url": "https://github.com/edjafarov/node-webkit-desktop-notification/issues"
   },
   "homepage": "https://github.com/edjafarov/node-webkit-desktop-notification",
-  "dependencies": {
+  "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-cli": "^0.1.13",
     "grunt-node-webkit-builder": "^0.2.3"
