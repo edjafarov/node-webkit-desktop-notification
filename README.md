@@ -29,7 +29,7 @@ check other ways to use `DesktopNotification` in [example](https://github.com/ed
 * find an app for your OS in build/node-webkit-desktop-notification
 * [play](http://screencast.com/t/bUxB6vNvW8BN)
 
-##API
+## API
 
 ### Class: DesktopNotification(title, options)
 
